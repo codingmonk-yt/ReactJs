@@ -677,6 +677,184 @@ This is the style where A composes B and A tells B to compose C. More power to p
 
 #### Pros
 
+- Better components lifecycle management
+- Better visibility into the composition architecture
+- Better reusuability
+
+
+#### Cons
+
+- Injecting props can become a little expensive
+- Less flexibility and power in child components
+
+#### Good if
+
+- B should accept to compose something different than C in the future or somewhere else
+- A should control the lifecycle of C
+
+* B would render C using this.props.children, and there isn't a structured way for B to know what those children are for.
+* So, B may enrich the child components by giving additional props down, but if B needs to know exactly what they are, #3 might be a better option.
+
+### 3. Nesting using props
+
+(continued from above)
+
+```jsx
+let CommentBox = reactCreateClass({
+    render: function() {
+        return (
+            <div className="commentBox">
+                <h1>Comments</h1>
+                <CommentList title={ListTitle}/> //prop <CommentForm />
+            </div>
+        );
+    }
+});
+```
+
+This is the style where A composes B and B provides an option for A to pass something to compose for a specific purpose. More structured composition.
+
+#### Pros
+
+- Composition as a feature
+- Easy validation
+- Better composaiblility
+
+#### Cons
+
+- Injecting props can become a little expensive
+- Less flexibility and power in child components
+
+#### Good if
+
+- B has specific features defined to compose something
+- B should only know how to render not what to render
+
+#3 is usually a must for making a public library of components but also a good practice in general to make composable components and clearly define the composition features. #1 is the easiest and fastest to make something that works, but #2 and #3 should provide certain benefits in various use cases.
+
+## Section 2.4: Props
+
+Props are a way to pass information into a React component, they can have any type including functions - sometimes referred to as callbacks.
+
+In JSX props are passed with the attribute syntax
+
+```jsx
+<MyComponent userID={123} />
+```
+
+Inside the definition for MyComponent userID will now be accessible from the props object
+
+```jsx
+// The render function inside MyComponent
+render() {
+    return (
+        <span>The user's ID is {this.props.userID}</span>
+    )
+}
+```
+
+It's important to define all props, their types, and where applicable, their default value:
+
+```jsx
+// defined at the bottom of MyComponent
+MyComponent.propTypes = {
+    someObject: React.PropTypes.object,
+    userID: React.PropTypes.number.isRequired,
+    title: React.PropTypes.string
+};
+MyComponent.defaultProps = {
+    someObject: {},
+    title: 'My Default Title'
+}
+```
+
+- In this example the prop someObject is optional, but the prop userID is required.
+- If you fail to provide userID to MyComponent, at runtime the React engine will show a console warning you that the required prop was not provided.
+- Beware though, this warning is only shown in the development version of the React library, the production version will not log any warnings.
+
+Using defaultProps allows you to simplify
+
+```jsx
+const { title = 'My Default Title' } = this.props;
+console.log(title);
+```
+
+to 
+
+```jsx
+console.log(this.props.title);
+```
+
+It's also a safeguard for use of object array and functions. If you do not provide a default prop for an object, the following will throw an error if the prop is not passed:
+
+```jsx
+if (this.props.someObject.someKey)
+```
+
+In example above, this.props.someObject is undefined and therefore the check of someKey will throw an error and the code will break. With the use of defaultProps you can safely use the above check.
+
+## Section 2.5: Component states - Dynamic user-interface
+
+Suppose we want to have the following behaviour - We have a heading (say h3 element) and on clicking it, we want it to become an input box so that we can modify heading name. React makes this highly simple and intuitive using component states and if else statements. (Code explanation below)
+
+```jsx
+// I have used ReactBootstrap elements. But the code works with regular html elements also
+let Button = ReactBootstrap.Button;
+let Form = ReactBootstrap.Form;
+
+let FormGroup = ReactBootstrap.FormGroup;
+let FormControl = ReactBootstrap.FormControl;
+
+let Comment = reactCreateClass({
+    getInitialState: function() {
+        return {show: false, newTitle: ''};
+    },
+
+    handleTitleSubmit: function() {
+        //code to handle input box submit - for example, issue an ajax request to change name in database
+    },
+
+    handleTitleChange: function(e) {
+
+        //code to change the name in form input box. newTitle is initialized as empty string. We need to update it with the string currently entered by user in the form
+        this.setState({newTitle: e.target.value});
+    },
+    changeComponent: function() {
+        // this toggles the show variable which is used for dynamic UI this.setState({show: !this.state.show)};
+    },
+
+render: function() {
+
+    let clickableTitle;
+    if(this.state.show) {
+        clickableTitle = <Form inline onSubmit={this.handleTitleSubmit}>
+                            <FormGroup controlId="formInlineTitle">
+                                <FormControl type="text" onChange={this.handleTitleChange}>
+                            </FormGroup>
+                         </Form>;
+    } else {
+        clickabletitle = <div>
+                            <Button bsStyle="link" onClick={this.changeComponent}>
+                                <h3> Default Text </h3>
+                            </Button>
+                        </div>;
+        }
+        return (
+            <div className="comment">
+                {clickableTitle}
+            </div>
+        );
+    }
+});
+ReactDOM.render(
+    <Comment />, document.getElementById('content')
+);
+```
+
+- The main part of the code is the **clickableTitle** variable. Based on the state variable **show**, it can be either be a Form element or a Button element. React allows nesting of components.
+- So we can add a {clickableTitle} element in the render function. It looks for the clickableTitle variable. Based on the value 'this.state.show', it displays the corresponding element.
+
+
 
 
 
