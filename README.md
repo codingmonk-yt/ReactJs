@@ -854,10 +854,185 @@ ReactDOM.render(
 - The main part of the code is the **clickableTitle** variable. Based on the state variable **show**, it can be either be a Form element or a Button element. React allows nesting of components.
 - So we can add a {clickableTitle} element in the render function. It looks for the clickableTitle variable. Based on the value 'this.state.show', it displays the corresponding element.
 
+## Section 2.6: Variations of Stateless Functional Components
 
+```js
+const languages = [
+    'JavaScript',
+    'Python',
+    'Java',
+    'Elm',
+    'TypeScript',
+    'C#',
+    'F#'
+]
+```
 
+```js
+// one liner
+const Language = ({language}) => <li>{language}</li>
 
+Language.propTypes = {
+  message: React.PropTypes.string.isRequired
+}
+```
 
+```js
+/**
+* If there are more than one line.
+* Please notice that round brackets are optional here, * However it's better to use them for readability
+*/
+const LanguagesList = ({languages}) => {
+      <ul>
+        {languages.map(language => <Language language={language} />)}
+      </ul>
+}
+LanguagesList.PropTypes = {
+  languages: React.PropTypes.array.isRequired
+}
+```
+
+```jsx
+/**
+ * This syntax is used if there are more work beside just JSX presentation
+ * For instance some data manipulations needs to be done.
+ * Please notice that round brackets after return are required,
+ * Otherwise return will return nothing (undefined)
+ */
+const LanguageSection = ({header, languages}) => {
+// do some work
+const formattedLanguages = languages.map(language => language.toUpperCase()) return (
+    <fieldset>
+      <legend>{header}</legend>
+      <LanguagesList languages={formattedLanguages} />
+    </fieldset>
+  )
+}
+LanguageSection.PropTypes = {
+  header: React.PropTypes.string.isRequired,
+  languages: React.PropTypes.array.isRequired
+}
+ReactDOM.render(
+  <LanguageSection
+    header="Languages"
+    languages={languages}
+  />,
+  document.getElementById('app')
+)
+```
+
+## Section 2.7: setState pitfalls
+
+You should use caution when using setState in an asynchronous context. For example, you might try to call setState in the callback of a get request:
+
+```jsx
+class MyClass extends React.Component {
+    constructor() {
+        super();
+
+        this.state = {
+            user: {}
+        };
+    }
+
+    componentDidMount() {
+        this.fetchUser();
+    }
+
+    fetchUser() {
+        $.get('/api/users/self')
+            .then((user) => {
+                this.setState({user: user});
+        });
+    }
+    render() {
+        return <h1>{this.state.user}</h1>;
+    }
+}
+```
+
+This could call problems - if the callback is called after the Component is dismounted, then this.setState won't be a function. Whenever this is the case, you should be careful to ensure your usage of setState is cancellable.
+
+In this example, you might wish to cancel the XHR request when the component dismounts:
+
+```jsx
+class MyClass extends React.Component {
+    constructor() {
+        super();
+        this.state = {
+            user: {},
+            xhr: null
+        };
+    }
+
+    componentWillUnmount() {
+        let xhr = this.state.xhr;
+
+        // Cancel the xhr request, so the callback is never called
+        if (xhr && xhr.readyState != 4) {
+            xhr.abort();
+        }    
+    }
+    componentDidMount() {
+        this.fetchUser();
+    }
+    fetchUser() {
+        let xhr = $.get('/api/users/self')
+                    .then((user) => {
+                        this.setState({user: user});
+                    });
+                this.setState({xhr: xhr});
+    }
+}
+```
+
+The async method is saved as a state. In the componentWillUnmount you perform all your cleanup - including canceling the XHR request.
+
+You could also do something more complex. In this example, I'm creating a 'stateSetter' function that accepts the this object as an argument and prevents this.setState when the function cancel has been called:
+
+```jsx
+function stateSetter(context) {
+    var cancelled = false;
+    return {
+        cancel: function () {
+            cancelled = true;
+        },
+        setState(newState) {
+            if (!cancelled) {
+                context.setState(newState);
+            }
+        }
+    }
+}
+class Component extends React.Component {
+    constructor(props) {
+    super(props);
+    this.setter = stateSetter(this);
+    this.state = {
+            user: 'loading'
+        };
+    }
+    componentWillUnmount() {
+        this.setter.cancel();
+    }
+    componentDidMount() {
+        this.fetchUser();
+    }
+    fetchUser() {
+        $.get('/api/users/self')
+            .then((user) => {
+                this.setter.setState({user: user});
+        });
+    }
+    render() {
+        return <h1>{this.state.user}</h1>
+    }
+}
+```
+
+This works because the cancelled variable is visible in the setState closure we created.
+
+------------------
 
 
 
